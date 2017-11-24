@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>Bluetooth experiment with Thingy 52 - Button</title>
+    <title>Bluetooth experiment with Thingy 52 - LED</title>
     <meta charset="utf-8">
     <!--
     https://nordicsemiconductor.github.io/Nordic-Thingy52-FW/documentation/ 
@@ -15,24 +15,32 @@
             "ef680400-9b35-4933-9b10-52ffa9740042",
             "ef680500-9b35-4933-9b10-52ffa9740042"
         ];
+
         //UI
         const uiServicesUUID = 'ef680300-9b35-4933-9b10-52ffa9740042';
         const buttonCharacteristicUUID = 'ef680302-9b35-4933-9b10-52ffa9740042';
         const ledCharacteristicUUID = 'ef680301-9b35-4933-9b10-52ffa9740042';
 
+        //Battery
+        const batteryServiceUUID = '180f';
+        const batteryCharacteristicUUID = '2a19';
+
         var bleDevice;
         var bleServer;
 
-
         var uiService;
-        var buttonchar;
         var ledChar;
 
         window.onload = function() {
             document.querySelector('#connect').addEventListener('click', connect);
             document.querySelector('#disconnect').addEventListener('click', disconnect);
+            document.querySelector('#ledOff').addEventListener('click', LEDOff);
+            document.querySelector('#ledConstant').addEventListener('click', LEDConstantRGB);
+            document.querySelector('#ledBreathe').addEventListener('click', LEDBreathe);
+            document.querySelector('#ledOneshot').addEventListener('click', LEDOneShot);
 
         };
+
 
         function connect() {
             if (!navigator.bluetooth) {
@@ -68,17 +76,13 @@
                     log('Found UI service', service);
                     uiService = service;
                 })
-                .then(() => uiService.getCharacteristic(buttonCharacteristicUUID))
+                .then(() => uiService.getCharacteristic(ledCharacteristicUUID))
                 .then(characteristic => {
-                    log('Found button characteristic');
-                    buttonchar = characteristic;
-                    return buttonchar.startNotifications();
+                    log('Found LED characteristic');
+                    ledChar = characteristic;
                 })
                 .then(() => {
-                    log('Notifications from button enabled');
-                    buttonchar.addEventListener('characteristicvaluechanged', handleNotifyButton);
-                })
-                .then(() => {
+                    document.getElementById("ledButtons").classList.remove('hidden');
                     log('=========== READY ===========');
                 })
                 .catch(error => {
@@ -101,9 +105,44 @@
             }
         }
 
-        function handleNotifyButton(event) {
-            let buttonValue = event.target.value.getUint8();
-            document.getElementById("btn").innerHTML = buttonValue ? "PRESSED" : "RELEASED";
+        function LEDOff(event) {
+            if (!ledChar) return;
+            const mode = 0
+            const dataArray = new Uint8Array([mode])
+            log("LED off", dataArray)
+            ledChar.writeValue(dataArray)
+        }
+
+        function LEDConstantRGB(event) {
+            if (!ledChar) return;
+            const mode = 1;
+            const red = 255;
+            const green = 0;
+            const blue = 128;
+            const dataArray = new Uint8Array([mode, red, green, blue])
+            log("LED constant color: rgb(" + red + "," + green + "," + blue + ")", dataArray)
+            ledChar.writeValue(dataArray)
+        }
+
+        function LEDBreathe(event) {
+            if (!ledChar) return
+            const mode = 2
+            const predefinedColor = 4
+            const intensity = 50
+            const delay = 500
+            const dataArray = new Uint8Array([mode, predefinedColor, intensity, delay & 0xFF, (delay >> 8) & 0xFF])
+            log("LED Breathe mode: ", dataArray)
+            ledChar.writeValue(dataArray)
+        }
+
+        function LEDOneShot(event) {
+            if (!ledChar) return;
+            const mode = 3
+            const predefinedColor = 2
+            const intensity = 90
+            const dataArray = new Uint8Array([mode, predefinedColor, intensity])
+            log("LED one shot breath", dataArray);
+            ledChar.writeValue(dataArray);
         }
 
 
@@ -113,12 +152,23 @@
             logElm.textContent = text + '\n' + logElm.textContent;
         }
     </script>
+    <style>
+        .hidden {
+            display: none;
+        }
+    </style>
 </head>
 
 <body>
     <button id="connect">Connect</button>
     <button id="disconnect">Disonnect</button>
-    <span>Button is: <span id="btn"></span></span>
+    <div id="ledButtons" class="hidden">
+        <h3>LED</h3>
+        <button id="ledOff">LED off</button>
+        <button id="ledConstant">LED Constant</button>
+        <button id="ledBreathe">LED Breathe</button>
+        <button id="ledOneshot">LED One Shot</button>
+    </div>
     <div><pre id="log"></pre></div>
 </body>
 
