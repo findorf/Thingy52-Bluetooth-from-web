@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="da" class="site-dk">
+
+<head>
+    <title>jfi bluetooth</title>
+    <meta charset="utf-8">
+    <!--
+    https://nordicsemiconductor.github.io/Nordic-Thingy52-FW/documentation/ 
+    -->
+    <script>
+        const serviceUUID = 'ef680100-9b35-4933-9b10-52ffa9740042';
+        const optionalServicesUUID = [
+            "ef680200-9b35-4933-9b10-52ffa9740042",
+            "ef680300-9b35-4933-9b10-52ffa9740042",
+            "ef680400-9b35-4933-9b10-52ffa9740042",
+            "ef680500-9b35-4933-9b10-52ffa9740042"
+        ];
+        //UI
+        const uiServicesUUID = 'ef680300-9b35-4933-9b10-52ffa9740042';
+        const buttonCharacteristicUUID = 'ef680302-9b35-4933-9b10-52ffa9740042';
+        const ledCharacteristicUUID = 'ef680301-9b35-4933-9b10-52ffa9740042';
+
+        var bleDevice;
+        var bleServer;
+
+
+        var uiService;
+        var buttonchar;
+        var ledChar;
+
+        window.onload = function() {
+            document.querySelector('#connect').addEventListener('click', connect);
+            document.querySelector('#disconnect').addEventListener('click', disconnect);
+
+        };
+
+        function connect() {
+            if (!navigator.bluetooth) {
+                return log('Web Bluetooth API is not available in browser.');
+            }
+            log('=============================');
+            log('Requesting Bluetooth Device...');
+            // RequestDevice must be in click handler (or other user inited events)
+            navigator.bluetooth.requestDevice({
+                    filters: [{
+                        services: [serviceUUID],
+                        //optionalServices: optionalServicesUUID
+                        //"name": "Thingy"
+                    }]
+                })
+                .then(device => {
+                    bleDevice = device;
+                    console.log({
+                        Name: device.name,
+                        Id: device.id,
+                        UUIDs: device.uuids,
+                        Device: device
+                    });
+                    log('Connected to device: ' + device.name);
+                    return device.gatt.connect();
+                })
+                .then(server => {
+                    bleServer = server;
+                    log('Found Server', server);
+                })
+                .then(() => bleServer.getPrimaryService(uiServicesUUID))
+                .then(service => {
+                    log('Found UI service', service);
+                    uiService = service;
+                })
+                .then(() => uiService.getCharacteristic(buttonCharacteristicUUID))
+                .then(characteristic => {
+                    log('Found button characteristic');
+                    buttonchar = characteristic;
+                    return buttonchar.startNotifications();
+                })
+                .then(() => {
+                    log('Notifications from button enabled');
+                    buttonchar.addEventListener('characteristicvaluechanged', handleNotifyButton);
+                })
+                .then(() => {
+                    log('=========== READY ===========');
+                })
+                .catch(error => {
+                    log('> connect ' + error);
+                });
+        }
+
+
+        function disconnect() {
+            if (!bleDevice) {
+                log('No Bluetooth Device found...');
+                return;
+            }
+            log('Disconnecting from Bluetooth Device...');
+            if (bleDevice.gatt.connected) {
+                bleDevice.gatt.disconnect();
+                log('Bluetooth Device connected: ' + bleDevice.gatt.connected);
+            } else {
+                log('Bluetooth Device is already disconnected');
+            }
+        }
+
+        function handleNotifyButton(event) {
+            let buttonValue = event.target.value.getUint8();
+            document.getElementById("btn").innerHTML = buttonValue ? "PRESSED" : "RELEASED";
+        }
+
+
+        function log(text) {
+            console.log(arguments);
+            const logElm = document.querySelector('#log');
+            let textContent = logElm.textContent;
+            textContent = text + '\n' + textContent;
+            logElm.textContent = textContent;
+        }
+    </script>
+</head>
+
+<body>
+    <button id="connect">Connect</button>
+    <button id="disconnect">Disonnect</button>
+    <span>Button is: <span id="btn"></span></span>
+    <div><pre id="log"></pre></div>
+</body>
+
+</html>
