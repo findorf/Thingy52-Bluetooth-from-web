@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Bluetooth experiment with Thingy 52 - Button</title>
+    <meta charset="utf-8">
+    <!--
+    https://nordicsemiconductor.github.io/Nordic-Thingy52-FW/documentation/ 
+    -->
+    <script>
+        const serviceUUID = 'ef680100-9b35-4933-9b10-52ffa9740042';
+        const optionalServicesUUID = [
+            "ef680200-9b35-4933-9b10-52ffa9740042",
+            "ef680300-9b35-4933-9b10-52ffa9740042",
+            "ef680400-9b35-4933-9b10-52ffa9740042",
+            "ef680500-9b35-4933-9b10-52ffa9740042"
+        ];
+
+        //Enviroment
+        const enviromentServiesUUID = 'ef680200-9b35-4933-9b10-52ffa9740042';
+        const tempheratureCharacteristicUUID = "ef680201-9b35-4933-9b10-52ffa9740042";
+        const pressurCharacteristicUUID = "ef680202-9b35-4933-9b10-52ffa9740042";
+        const humidityCharacteristicUUID = "ef680203-9b35-4933-9b10-52ffa9740042";
+        const gasCharacteristicUUID = "ef680204-9b35-4933-9b10-52ffa9740042";
+        const colorCharacteristicUUID = "ef680205-9b35-4933-9b10-52ffa9740042";
+        const enviromentConfigurationCharacteristicUUID = "ef680206-9b35-4933-9b10-52ffa9740042";
+
+        var bleDevice;
+        var bleServer;
+
+        var enviromentService;
+        var enviromentConfigurationChar;
+        var temperatureChar;
+        var colorChar;
+
+
+        window.onload = function() {
+            document.querySelector('#connect').addEventListener('click', connect);
+            document.querySelector('#disconnect').addEventListener('click', disconnect);
+
+        };
+
+        function connect() {
+            if (!navigator.bluetooth) {
+                return log('Web Bluetooth API is not available in browser.');
+            }
+            log('=============================');
+            log('Requesting Bluetooth Device...');
+            // RequestDevice must be in click handler (or other user inited events)
+            navigator.bluetooth.requestDevice({
+                    filters: [{
+                        services: [serviceUUID],
+                        //optionalServices: optionalServicesUUID
+                        //"name": "Thingy"
+                    }]
+                })
+                .then(device => {
+                    bleDevice = device;
+                    console.log({
+                        Name: device.name,
+                        Id: device.id,
+                        UUIDs: device.uuids,
+                        Device: device
+                    });
+                    log('Connected to device: ' + device.name);
+                    return device.gatt.connect();
+                })
+                .then(server => {
+                    bleServer = server;
+                    log('Found Server', server);
+                })
+                .then(() => bleServer.getPrimaryService(enviromentServiesUUID))
+                .then(service => {
+                    log('Found enviroment service', service);
+                    enviromentService = service;
+                })
+                .then(() => enviromentService.getCharacteristic(enviromentConfigurationCharacteristicUUID))
+                .then(characteristic => {
+                    log('Found enviroment configuration characteristic');
+                    enviromentConfigurationChar = characteristic;
+                })
+                .then(() => {
+                    const temperatureInterval = 1000; //min="100" max="5000"
+                    const pressureInterval = 5000; //min="50" max="5000"
+                    const humidityInterval = 5000; //min="100" max="5000"
+                    const colorInterval = 5000; //min="200" max="5000"
+                    const gasMode = 2; //1: 1s interval, 2 = 10s interval, 3 = 60s interval 
+                    const redCalibration = 1; //min="0" max="255"
+                    const greenCalibration = 1; //min="0" max="255"
+                    const blueCalibration = 1; //min="0" max="255"
+
+                    let configuration = new Uint8Array(12);
+                    configuration[0] = temperatureInterval & 0xFF;
+                    configuration[1] = (temperatureInterval >> 8) & 0xFF;
+                    configuration[2] = pressureInterval & 0xFF;
+                    configuration[3] = (pressureInterval >> 8) & 0xFF;
+                    configuration[4] = humidityInterval & 0xFF;
+                    configuration[5] = (humidityInterval >> 8) & 0xFF;
+                    configuration[6] = colorInterval & 0xFF;
+                    configuration[7] = (colorInterval >> 8) & 0xFF;
+                    configuration[8] = gasMode;
+                    configuration[9] = redCalibration;
+                    configuration[10] = greenCalibration;
+                    configuration[11] = blueCalibration;
+                    log("Enviroment configuration is about to be written", configuration);
+                    return enviromentConfigurationChar.writeValue(configuration);
+                })
+                .then(() => enviromentService.getCharacteristic(tempheratureCharacteristicUUID))
+                .then(characteristic => {
+                    log('Found temperature characteristic');
+                    temperatureChar = characteristic;
+                    return temperatureChar.startNotifications();
+                })
+                .then(() => {
+                    log('Notifications for temperature enabled');
+                    return temperatureChar.addEventListener('characteristicvaluechanged', handleNotifyTemperature);
+                })
+                .then(() => {
+                    log('=========== READY ===========');
+                })
+                .catch(error => {
+                    log('Connection Error: ' + error);
+                });
+        }
+
+
+        function disconnect() {
+            if (!bleDevice) {
+                log('No Bluetooth Device found...');
+                return;
+            }
+            log('Disconnecting from Bluetooth Device...');
+            if (bleDevice.gatt.connected) {
+                bleDevice.gatt.disconnect();
+                log('Bluetooth Device connected: ' + bleDevice.gatt.connected);
+            } else {
+                log('Bluetooth Device is already disconnected');
+            }
+        }
+
+        function handleNotifyTemperature(event) {
+            const temperatureValue = event.target.value;
+            console.log("temperatureValue", temperatureValue.length, temperatureValue.getUint8())
+
+            const integer = temperatureValue.getInt8(0);
+            const decimal = temperatureValue.getUint8(1);
+            const temperature = integer + ',' + decimal;
+            log('temperature event: ' + temperature, integer, decimal);
+        }
+
+
+        function log(text) {
+            console.log(arguments);
+            const logElm = document.querySelector('#log');
+            logElm.textContent = text + '\n' + logElm.textContent;
+        }
+    </script>
+</head>
+
+<body>
+    <button id="connect">Connect</button>
+    <button id="disconnect">Disonnect</button>
+    <span>Button is: <span id="btn"></span></span>
+    <div><pre id="log"></pre></div>
+</body>
+
+</html>
