@@ -2,7 +2,7 @@
 
 # Bluetooth BLE connection form the web
 Connecting to the [Thingy 52 IoT Sensor Kit](https://www.nordicsemi.com/eng/Products/Nordic-Thingy-52) with Bluetooth BLE from a Chrome browser.
-![Thingy 52][https://github.com/findorf/Thingy52-Bluetooth-from-web/raw/master/thingy-52-IoT-Sensor-kit.jpg]
+![Thingy 52](https://github.com/findorf/Thingy52-Bluetooth-from-web/raw/master/thingy-52-IoT-Sensor-kit.jpg)
 
 Blog post found at [blog.vertica.dk](https://blog.vertica.dk/2017/11/28/connecting-to-a-bluetooth-device-from-the-web/) 
 
