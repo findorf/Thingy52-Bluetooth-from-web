@@ -19,7 +19,7 @@
         //Enviroment
         const enviromentServiesUUID = 'ef680200-9b35-4933-9b10-52ffa9740042';
         const tempheratureCharacteristicUUID = "ef680201-9b35-4933-9b10-52ffa9740042";
-        const pressurCharacteristicUUID = "ef680202-9b35-4933-9b10-52ffa9740042";
+        const pressureCharacteristicUUID = "ef680202-9b35-4933-9b10-52ffa9740042";
         const humidityCharacteristicUUID = "ef680203-9b35-4933-9b10-52ffa9740042";
         const gasCharacteristicUUID = "ef680204-9b35-4933-9b10-52ffa9740042";
         const colorCharacteristicUUID = "ef680205-9b35-4933-9b10-52ffa9740042";
@@ -31,6 +31,9 @@
         var enviromentService;
         var enviromentConfigurationChar;
         var temperatureChar;
+        var pressureChar;
+        var humidityChar;
+        var gasChar;
         var colorChar;
 
 
@@ -115,6 +118,36 @@
                     log('Notifications for temperature enabled');
                     return temperatureChar.addEventListener('characteristicvaluechanged', handleNotifyTemperature);
                 })
+                .then(() => enviromentService.getCharacteristic(pressureCharacteristicUUID))
+                .then(characteristic => {
+                    log('Found pressure characteristic');
+                    pressureChar = characteristic;
+                    return pressureChar.startNotifications();
+                })
+                .then(() => {
+                    log('Notifications for pressure enabled');
+                    return pressureChar.addEventListener('characteristicvaluechanged', handleNotifyPressure);
+                })
+                .then(() => enviromentService.getCharacteristic(humidityCharacteristicUUID))
+                .then(characteristic => {
+                    log('Found humidity characteristic');
+                    humidityChar = characteristic;
+                    return humidityChar.startNotifications();
+                })
+                .then(() => {
+                    log('Notifications for humidity enabled');
+                    return humidityChar.addEventListener('characteristicvaluechanged', handleNotifyHumidity);
+                })
+                .then(() => enviromentService.getCharacteristic(gasCharacteristicUUID))
+                .then(characteristic => {
+                    log('Found gas characteristic');
+                    gasChar = characteristic;
+                    return gasChar.startNotifications();
+                })
+                .then(() => {
+                    log('Notifications for gas enabled');
+                    return gasChar.addEventListener('characteristicvaluechanged', handleNotifyGas);
+                })
                 .then(() => {
                     log('=========== READY ===========');
                 })
@@ -148,6 +181,27 @@
             log('temperature event: ' + temperature, integer, decimal);
         }
 
+        function handleNotifyPressure(event) {
+            const pressureValue = event.target.value;
+            const integer = pressureValue.getInt32(0, true);
+            const decimal = pressureValue.getUint8(4);
+            const pressure = integer + ',' + decimal;
+            log('pressure event: ' + pressure, integer, decimal)
+        }
+
+        function handleNotifyHumidity(event) {
+            const humidityValue = event.target.value;
+            const humidity = humidityValue.getUint8(0);
+            log('humidity event: ' + humidity + 'RH')
+        }
+
+        function handleNotifyGas(event) {
+            const gasValue = event.target.value;
+            const eCO2ppm = gasValue.getUint16(0, true);
+            const TVOCppb = gasValue.getUint16(2, true);
+            log('gas event: CO2: ' + eCO2ppm + 'ppm, TVOC: ' + TVOCppb + 'ppb');
+        }
+
 
         function log(text) {
             console.log(arguments);
@@ -160,7 +214,6 @@
 <body>
     <button id="connect">Connect</button>
     <button id="disconnect">Disonnect</button>
-    <span>Button is: <span id="btn"></span></span>
     <div><pre id="log"></pre></div>
 </body>
 
