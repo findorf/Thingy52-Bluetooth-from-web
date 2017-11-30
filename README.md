@@ -9,3 +9,5 @@ In the Thingy 52 manual, the most important part is [this page](https://nordicse
 1. Simplest is the [button-demo](./button-demo/index.html) that only reads the state of the button when user presses it.
 2. Writing to the LED with the [led-demo](./led-demo/index.html) is only sligthly more complex.
 3. Full demo of the Weather Station service with the [temperature-demo](./temperature-demo/index.html)
+
+Enjoy!
