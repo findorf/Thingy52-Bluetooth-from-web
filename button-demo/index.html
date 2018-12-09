@@ -44,9 +44,9 @@
             navigator.bluetooth.requestDevice({
                     filters: [{
                         services: [serviceUUID],
-                        //optionalServices: optionalServicesUUID
                         //"name": "Thingy"
-                    }]
+                    }],
+                    //optionalServices: optionalServicesUUID
                 })
                 .then(device => {
                     bleDevice = device;
